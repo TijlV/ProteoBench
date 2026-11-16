@@ -15,6 +15,7 @@ tools = [
     "i2MassChroQ",
     "InstaNovo",
     "MetaMorpheus",
+    "MS2Rescore",
     "Pi-HelixNovo",
     "Pi-PrimeNovo",
     "PointNovo",

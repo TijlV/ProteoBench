@@ -101,6 +101,26 @@ Available ProteoBench modules
         +++
         `Web app <https://proteobench.cubimed.rub.de/denovo_DDA_HCD>`__ · `Documentation <https://proteobench.readthedocs.io/en/latest/modules/dda/denovo-dda-hcd/>`__
 
+    .. grid-item-card:: Immuno HLA-I DDA timsTOF
+        :columns: 6 6 4 4
+        :padding: 1
+
+        :bdg-info:`in development`
+        ^^^
+        Benchmark the pool peptides identified and the false discovery proportion of HLA class I identification workflows on timsTOF DDA runs of a synthetic peptide pool of known composition.
+        +++
+        `Web app <https://proteobench.cubimed.rub.de/Immuno_HLAI_DDA_timsTOF>`__ · `Documentation <https://proteobench.readthedocs.io/en/latest/>`__
+
+    .. grid-item-card:: Immuno HLA-I DIA diaPASEF
+        :columns: 6 6 4 4
+        :padding: 1
+
+        :bdg-info:`in development`
+        ^^^
+        Benchmark the pool peptides identified and the false discovery proportion of HLA class I identification workflows on diaPASEF runs of a synthetic peptide pool of known composition.
+        +++
+        `Web app <https://proteobench.cubimed.rub.de/Immuno_HLAI_DIA_diaPASEF>`__ · `Documentation <https://proteobench.readthedocs.io/en/latest/>`__
+
     .. grid-item-card:: Quant LFQ DIA ion Astral (low-input)
         :columns: 6 6 4 4
         :padding: 1

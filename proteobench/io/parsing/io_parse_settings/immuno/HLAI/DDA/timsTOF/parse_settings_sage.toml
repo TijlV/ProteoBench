@@ -1,0 +1,17 @@
+[mapper]
+"filename" = "Raw file"
+"peptide" = "Sequence"
+"charge" = "Charge"
+"rank" = "Rank"
+"label" = "Decoy"
+"peptide_q" = "Q-Value"
+
+[general]
+# Sage writes label = -1 for decoys and 1 for targets.
+"decoy_values" = [-1]
+
+[upload_info]
+"datapoint_file" = "results.sage.tsv"
+"datapoint_file_description" = "Upload the Sage `results.sage.tsv` file. All runs must be searched together, with `report_psms` of at least 1 and without the q-value filter turned off."
+"params_file" = "results.json"
+"params_file_description" = "Upload the Sage `results.json` file."

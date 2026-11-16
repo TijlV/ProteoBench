@@ -1,0 +1,13 @@
+Raw file	Sequence	Q-Value	Rank	Decoy
+/data/run1.mzML	SAMPLEPEPK	0.001	1	false
+run1.mzML	AMPLEPEPK	0.002	1	false
+run1.mzML	CQPRESENTK	0.003	1	false
+run1.mzML	WWWWYYYY	0.004	1	false
+run1.mzML	ASSENTPEPK	0.005	1	false
+run1.mzML	DDDDEEEEK	0.006	1	false
+run1.mzML	KPEPELPMAS	0.001	1	true
+run1.mzML	GTHEPEPKR	0.001	2	false
+run1.mzML	QPRESENTK	0.5	1	false
+run2.mzML	SAMPIEPEPK	0.001	1	false
+run2.mzML	S[+79.966]AMPLEPEPK	0.002	1	false
+run2.mzML	GTHEPEPKR	0.003	1	false

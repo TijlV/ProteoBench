@@ -137,13 +137,23 @@ _PARAMETER_FILTERS = [
     {"col": "reported_fdr_parsed_from_input", "label": "Reported FDR (parsed from input)", "type": "max_slider"},
     {"col": "category_combined", "label": "FDR validity (combined method)", "type": "multiselect"},
     {"col": "category_paired", "label": "FDR validity (paired method)", "type": "multiselect"},
+    # Immunopeptidomics specific filters (only shown when columns exist with 2+ unique values)
+    {"col": "rescoring", "label": "Rescoring", "type": "multiselect"},
+    {"col": "rescoring_model", "label": "Rescoring model", "type": "multiselect"},
+    {"col": "r_source", "label": "Search space r taken from", "type": "multiselect"},
     {"col": "open_source", "label": "Open source", "type": "radio_open_source"},
 ]
 
 
+def _as_labels(series: pd.Series) -> pd.Series:
+    """Return *series* as strings, with NaN and blank values as _NOT_SPECIFIED."""
+    labels = series.fillna(_NOT_SPECIFIED).astype(str)
+    return labels.where(labels.str.strip() != "", _NOT_SPECIFIED)
+
+
 def _get_unique_values(series: pd.Series) -> List[str]:
-    """Return sorted unique string values from *series*, mapping NaN to _NOT_SPECIFIED."""
-    values = series.fillna(_NOT_SPECIFIED).astype(str).unique()
+    """Return sorted unique string values from *series*, mapping NaN and blanks to _NOT_SPECIFIED."""
+    values = _as_labels(series).unique()
     return sorted(values, key=lambda v: (v == _NOT_SPECIFIED, v))
 
 
@@ -258,8 +268,7 @@ def apply_parameter_filters(
 
         elif spec["type"] == "multiselect":
             if isinstance(selection, list):
-                str_col = data[col].fillna(_NOT_SPECIFIED).astype(str)
-                mask &= str_col.isin(selection)
+                mask &= _as_labels(data[col]).isin(selection)
 
         elif spec["type"] == "select_slider":
             if isinstance(selection, (list, tuple)) and len(selection) == 2:
@@ -434,19 +443,23 @@ def generate_parameter_filters(
                     col_name = spec["col"]
                     sk = f"{key_prefix}_{col_name}"
                     all_options = _get_unique_values(data[col_name])
+                    options_key = f"{sk}__options"
                     raw_default = st.session_state.get(sk, all_options)
-                    # Drop stale values that no longer exist in the current options
-                    # (e.g. after the latest-version filter removes certain rows).
-                    options_set = set(all_options)
+                    seen_options = set(st.session_state.get(options_key, []))
+                    # Keep the stored selection for options that still exist, and select every
+                    # option that was not offered before (e.g. a value of a new datapoint).
                     default = (
-                        [v for v in raw_default if v in options_set] if isinstance(raw_default, list) else all_options
+                        [v for v in all_options if v in raw_default or v not in seen_options]
+                        if isinstance(raw_default, list)
+                        else all_options
                     )
                     if not default:
                         default = all_options
+                    st.session_state[sk] = default
+                    st.session_state[options_key] = all_options
                     selected = st.multiselect(
                         label,
                         options=all_options,
-                        default=default,
                         key=sk,
                     )
                     filter_selections[col_name] = selected

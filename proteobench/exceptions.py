@@ -68,6 +68,12 @@ class EntrapmentError(ProteobenchError):
         super().__init__(self.message)
 
 
+class ImmunoError(ProteobenchError):
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
+
+
 class PlotError(ProteobenchError):
     def __init__(self, message):
         self.message = message

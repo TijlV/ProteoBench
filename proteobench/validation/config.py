@@ -56,6 +56,7 @@ DEFAULT_VALIDATION_PROFILE = "quant_lfq"
 _PROFILE_BY_PARSER_CLASS = {
     "ParseSettingsQuant": "quant_lfq",
     "ParseSettingsDeNovo": "denovo",
+    "ParseSettingsImmuno": "immuno",
 }
 
 #: Common decoy-identifier prefixes. The ParseSettings configuration marks

@@ -249,6 +249,31 @@ def _denovo_pending_check(ctx: ValidationContext) -> List[ValidationIssue]:
     return report.issues
 
 
+def _immuno_peptide_length_check(ctx: ValidationContext) -> List[ValidationIssue]:
+    """
+    Validate peptide lengths on sequences stripped of modifications.
+
+    The immuno standard table keeps the tool's own peptide notation, which can hold modification
+    names (``M[Oxidation]``) whose letters would otherwise be counted as residues.
+
+    Parameters
+    ----------
+    ctx : ValidationContext
+        The validation context (uses ``standard_df``, ``parameters``, ``config``).
+
+    Returns
+    -------
+    list of ValidationIssue
+        Peptide-length issues.
+    """
+    df = ctx.standard_df
+    column = ctx.config.sequence_column
+    if column in df.columns:
+        stripped = df[column].astype(str).str.replace(r"\[[^\]]*\]|\([^)]*\)|/\d+$", "", regex=True)
+        df = df.assign(**{column: stripped})
+    return check_peptide_length(df, ctx.parameters, ctx.config)
+
+
 # --------------------------------------------------------------------------- #
 # Built-in profiles
 # --------------------------------------------------------------------------- #
@@ -315,5 +340,42 @@ DENOVO_PROFILE = ValidationProfile(
     ],
 )
 
+IMMUNO_PROFILE = ValidationProfile(
+    name="immuno",
+    description=(
+        "Immunopeptidomics identification modules. Peptides are scored against a ground truth "
+        "rather than a protein FASTA, and the search is non-specific, so the protein-ID and enzyme "
+        "checks are left out."
+    ),
+    checks=[
+        Check(
+            "charge_range",
+            lambda ctx: check_charge_range(ctx.standard_df, ctx.parameters, ctx.config),
+            "Precursor charges within the searched charge range.",
+        ),
+        Check(
+            "peptide_length",
+            _immuno_peptide_length_check,
+            "Peptide lengths (without modifications) within the searched length range.",
+        ),
+        Check(
+            "mass_tolerances",
+            lambda ctx: check_mass_tolerances(ctx.standard_df, ctx.parameters, ctx.config),
+            "Precursor/fragment mass tolerances are present and positive (warning only).",
+        ),
+        Check(
+            "fdr_psm",
+            lambda ctx: check_fdr_psm(ctx.standard_df, ctx.parameters, ctx.config),
+            "PSM-level FDR within the valid range and recommended maximum (warning only).",
+        ),
+        Check(
+            "run_consistency",
+            lambda ctx: check_run_consistency(ctx.standard_df, ctx.parameters, ctx.input_format, ctx.config),
+            "Parameter file matches the submitted run (software identity).",
+        ),
+    ],
+)
+
 register_profile(QUANT_LFQ_PROFILE, overwrite=True)
 register_profile(DENOVO_PROFILE, overwrite=True)
+register_profile(IMMUNO_PROFILE, overwrite=True)

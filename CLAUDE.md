@@ -215,6 +215,10 @@ The `MODULE_CLASSES` dict in `utils/server_io.py` maps module class-name strings
 
 `make_submission()` supports both module families despite their differing `benchmarking()` signatures. Optional keys in a submission dict (`default_cutoff_min_feature`, `evaluation_type`, `max_nr_observed`, `input_file_secondary`, listed in `OPTIONAL_BENCHMARKING_KEYS`) are forwarded only when the target module's signature accepts them, so quant's `default_cutoff_min_feature` and de novo's `evaluation_type` can both be passed without raising `TypeError`. It parses the metadata file *before* benchmarking and seeds `user_input` from the resulting `ProteoBenchParameters`, so the datapoint id — and hence the PR branch name — carries the real software version, checkpoint and decoding strategy rather than empty strings. It returns a **list** of PR URLs, one per submission.
 
+### Immunopeptidomics Modules (`proteobench/modules/immuno/`)
+
+In development (local web pages 15/16, no results repositories). `immuno_HLAI_DDA_timsTOF` and `immuno_HLAI_DIA_diaPASEF` score HLA class I identification workflows against a known ground truth: the number of designed pool peptides identified per run and the FDP with the combined entrapment estimator. Everything sample-specific (ground-truth table, sample/co-present groups, background FASTA, FASTA header rules, search-space ratio `r`) lives in a dataset folder (`modules/immuno/datasets/<name>/dataset.toml`) named in the module's `module_settings.toml`, so another sample needs no code changes. `ImmunoModule.offline().score(...)` scores a file without GitHub access. See `proteobench/modules/immuno/README.md`.
+
 ### Rescoring Module (`proteobench/modules/rescoring/`)
 
 A placeholder for a future rescoring module. Currently a stub: `module_rescoring.py` defines only a module-level `is_implemented()` returning `False`; `__init__.py` is a docstring. No module class, `module_id`, parse settings, or `MODULE_SETTINGS_DIRS`/`MODULE_CLASSES` registration exists yet, and it is not wired into the benchmarking pipeline or web interface.
@@ -348,14 +352,14 @@ A framework-agnostic, **registry-driven** validation package that checks uploade
 | `context.py` | `ValidationContext` — bundles all inputs a check might need (`standard_df`, `parameters`, `config`, `fasta`, `input_format`, generic `reference`, `extras`) so every check has the uniform signature `ctx -> list[ValidationIssue]` |
 | `config.py` | `ModuleValidationConfig` — column names, contaminant flag, decoy prefixes, FASTA URL, and the resolved `validation_profile`; built via `from_parse_settings(parse_settings_dir, module_id, input_format)` |
 | `checks.py` | Pure check functions: `check_protein_ids`, `check_charge_range`, `check_peptide_length`, `check_enzyme`, `check_modifications`, `check_max_modifications`, `check_mass_tolerances`, `check_fdr_psm`, `check_run_consistency` (kept individually unit-testable) |
-| `profiles.py` | `Check` (named `ctx`-callable), `ValidationProfile` (ordered list of checks), the profile **registry** (`register_profile`/`unregister_profile`/`get_profile`/`available_profiles`), and the built-in `quant_lfq` and `denovo` profiles |
+| `profiles.py` | `Check` (named `ctx`-callable), `ValidationProfile` (ordered list of checks), the profile **registry** (`register_profile`/`unregister_profile`/`get_profile`/`available_profiles`), and the built-in `quant_lfq`, `denovo` and `immuno` profiles |
 | `validator.py` | `validate_submission(standard_df, parameters, fasta, config, input_format, profile)` — resolves the profile, builds the context, runs the profile's checks; each check is fault-tolerant (unexpected exceptions become warnings) |
 
 **Profile registry (the extensibility surface).** A `ValidationProfile` is a named, ordered list of `Check`s; checks are reusable across profiles (e.g. `run_consistency` is shared by `quant_lfq` and `denovo`). `validate_submission` looks up `config.validation_profile` in the registry and runs only that profile's checks — there is no `if module_type == ...` branching. To support a brand-new module category: register a profile in `profiles.py` (or from third-party code via `register_profile`) and point the module at it; the orchestrator never changes.
 
 **Profile resolution** (`ModuleValidationConfig.from_parse_settings`, in precedence order):
 1. explicit `[validation].profile` in the module's `module_settings.toml` (declarative);
-2. inferred from the parser class via the existing `MODULE_TO_CLASS` registry (`ParseSettingsQuant` → `quant_lfq`, `ParseSettingsDeNovo` → `denovo`);
+2. inferred from the parser class via the existing `MODULE_TO_CLASS` registry (`ParseSettingsQuant` → `quant_lfq`, `ParseSettingsDeNovo` → `denovo`, `ParseSettingsImmuno` → `immuno`);
 3. `DEFAULT_VALIDATION_PROFILE` (`quant_lfq`).
 
 An unregistered profile name produces a single `unknown_validation_profile` warning and runs nothing (never blocks).
@@ -377,7 +381,7 @@ An unregistered profile name produces a single `unknown_validation_profile` warn
 | `run_consistency` (software identity) | ERROR | `params.software_name` vs `input_format` |
 | (absent parameter) | WARNING | Each param-dependent check self-reports when its constraint was not parsed; never crashes |
 
-The `denovo` profile currently runs only `run_consistency` plus a `denovo_pending` info placeholder (de novo uses a different standardized schema — `spectrum_id`/`peptide_str`/`aa_scores` — and a ground-truth table rather than a FASTA; content checks are a documented TODO in `profiles.py`).
+The `denovo` profile currently runs only `run_consistency` plus a `denovo_pending` info placeholder (de novo uses a different standardized schema — `spectrum_id`/`peptide_str`/`aa_scores` — and a ground-truth table rather than a FASTA; content checks are a documented TODO in `profiles.py`). The `immuno` profile runs charge range, peptide length (on sequences stripped of modifications), mass tolerances, PSM FDR and run consistency; it leaves out `protein_ids` (peptides are scored against a ground truth, not a FASTA) and `enzyme` (non-specific search). Both immuno `module_settings.toml` files declare `[validation] profile = "immuno"`.
 
 **Reference FASTA configuration.** Each quant module's `module_settings.toml` contains an optional section:
 

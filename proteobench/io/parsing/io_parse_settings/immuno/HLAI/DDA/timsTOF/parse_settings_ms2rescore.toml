@@ -1,0 +1,17 @@
+[mapper]
+"run" = "Raw file"
+"peptidoform" = "Sequence"
+"rank" = "Rank"
+"is_decoy" = "Decoy"
+# One q-value per modified sequence (charge-independent), the same level as Sage peptide_q.
+# meta:peptide_qvalue is per stripped sequence and therefore coarser.
+"meta:peptidoform_qvalue" = "Q-Value"
+
+[general]
+"decoy_values" = [true]
+
+[upload_info]
+"datapoint_file" = "<stem>.ms2rescore.tsv"
+"datapoint_file_description" = "Upload the full MS²Rescore PSM table (`<stem>.ms2rescore.tsv`), not `<stem>.psms.tsv`: only the full table has the PSM rank and the peptidoform-level q-value."
+"params_file" = "ms2rescore configuration (.json or .toml)"
+"params_file_description" = "Upload the MS²Rescore configuration file (`.json` or `.toml`). The search engine parameters are entered by hand."

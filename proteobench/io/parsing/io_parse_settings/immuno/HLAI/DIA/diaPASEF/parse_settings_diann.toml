@@ -1,0 +1,22 @@
+[mapper]
+"Run" = "Raw file"
+"Stripped.Sequence" = "Sequence"
+"Precursor.Charge" = "Charge"
+
+[optional_mapper]
+# Only written with --report-decoys.
+"Decoy" = "Decoy"
+
+[qvalue]
+# A precursor counts in a run when it passes both in that run (Q.Value) and as a peptidoform over
+# all runs (Global.Peptidoform.Q.Value; Global.Q.Value in versions without it).
+"columns" = [["Q.Value"], ["Global.Peptidoform.Q.Value", "Global.Q.Value"]]
+
+[general]
+"decoy_values" = [1]
+
+[upload_info]
+"datapoint_file" = "report.parquet"
+"datapoint_file_description" = "Upload the DIA-NN main report (`report.parquet`, or `report.tsv` for DIA-NN 1.x). For a spectral-library search, also upload the library as a TSV or parquet file: r is then taken from the library."
+"params_file" = "report.log.txt"
+"params_file_description" = "Upload the DIA-NN log file (`report.log.txt`)."

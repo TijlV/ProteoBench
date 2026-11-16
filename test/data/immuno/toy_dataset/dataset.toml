@@ -1,0 +1,50 @@
+# Toy ground truth for the tests: different group names, column names, host species and length
+# range than the Pepyrus dataset, to check that nothing in the modules is specific to Pepyrus.
+
+[dataset]
+"name" = "Toy dataset"
+"version" = "test"
+
+[ground_truth]
+"file" = "ground_truth.tsv"
+"sequence_column" = "peptide"
+"group_column" = "pool"
+"sample_groups" = ["S"]
+"co_present_groups" = ["C"]
+
+[peptides]
+"min_length" = 8
+"max_length" = 8
+"collapse_il" = true
+
+[recall]
+"exclude_first_residue" = ["G"]
+
+[background]
+"fasta" = "background.fasta"
+"categories" = ["construct", "host"]
+
+[search_space]
+# Not the r of search.fasta (6/14); chosen to give round FDP values in the tests.
+"r" = 4.0
+"entrapment_categories" = ["human"]
+"min_r" = 1.0
+
+[[fasta_rules]]
+"pattern" = "^lib\\|"
+"category" = "library"
+
+[[fasta_rules]]
+"pattern" = "OS=Saccharomyces"
+"category" = "host"
+
+[[fasta_rules]]
+"pattern" = "^(?!.*OS=)"
+"category" = "construct"
+
+[[fasta_rules]]
+"pattern" = "OS=Homo sapiens"
+"category" = "human"
+
+[fasta_rules_default]
+"category" = "contaminant"

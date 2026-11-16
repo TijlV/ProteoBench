@@ -8,6 +8,7 @@ IO_PARSE_SETTINGS_DIR = pathlib.Path(__file__) / ".." / ".." / "io" / "parsing" 
 QUANT_LFQ_SETTINGS_DIR = (IO_PARSE_SETTINGS_DIR / "Quant" / "lfq").resolve()
 DENOVO_SETTINGS_DIR = (IO_PARSE_SETTINGS_DIR / "denovo").resolve()
 ENTRAPMENT_SETTINGS_DIR = (IO_PARSE_SETTINGS_DIR / "entrapment").resolve()
+IMMUNO_SETTINGS_DIR = (IO_PARSE_SETTINGS_DIR / "immuno").resolve()
 
 MODULE_SETTINGS_DIRS = {
     "quant_lfq_DIA_ion_AIF": (QUANT_LFQ_SETTINGS_DIR / "DIA" / "ion" / "AIF").as_posix(),
@@ -23,4 +24,6 @@ MODULE_SETTINGS_DIRS = {
     "entrapment_DIA_ion_Astral": (ENTRAPMENT_SETTINGS_DIR / "DIA" / "ion" / "Astral").as_posix(),
     "quant_lfq_DIA_ion_Astral_lowinput": (QUANT_LFQ_SETTINGS_DIR / "DIA" / "ion" / "Astral_lowinput").as_posix(),
     "quant_lfq_DIA_ion_timsTOF_lowinput": (QUANT_LFQ_SETTINGS_DIR / "DIA" / "ion" / "timsTOF_lowinput").as_posix(),
+    "immuno_HLAI_DDA_timsTOF": (IMMUNO_SETTINGS_DIR / "HLAI" / "DDA" / "timsTOF").as_posix(),
+    "immuno_HLAI_DIA_diaPASEF": (IMMUNO_SETTINGS_DIR / "HLAI" / "DIA" / "diaPASEF").as_posix(),
 }

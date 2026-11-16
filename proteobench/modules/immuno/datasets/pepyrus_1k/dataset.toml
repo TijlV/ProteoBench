@@ -1,0 +1,85 @@
+# Ground-truth definition for the immunopeptidomics modules.
+#
+# Everything that depends on the sample lives in this file and the two data files next to it.
+# To benchmark another sample (for example a purpose-made Pepyrus pool), copy this folder, replace
+# the data files, edit this file, and point `dataset` in the module's module_settings.toml at it.
+# Paths are relative to this folder; http(s) URLs are downloaded and cached. A file that is not in
+# this folder is downloaded from its `url` (`fasta_url` for the background FASTA).
+
+[dataset]
+"name" = "Pepyrus HLA-I 1k pool"
+"version" = "0.1"
+"description" = "Pepyrus synthetic HLA class I peptide library, 1k pool (order1 G4). Manakongtreecheep, Ctortecka et al., Nat. Biotechnol. 2026 (doi 10.1038/s41587-026-03003-9); MassIVE MSV000096555 / PXD058389."
+
+[ground_truth]
+# TSV with one row per library peptide: its sequence and the library group it belongs to.
+"file" = "ground_truth.tsv.gz"
+# Placeholder: not yet on the ProteoBench server.
+"url" = "https://proteobench.cubimed.rub.de/datasets/module_data/immuno/pepyrus_1k/ground_truth.tsv.gz"
+"sequence_column" = "sequence"
+"group_column" = "group"
+# Groups that make up the analysed sample (true positives).
+"sample_groups" = ["order1_G4_TUM_HLA"]
+# Library groups that are in the sample although not in the design. Neither true nor false; they
+# must never count as entrapment. The 1k samples of all preparations contain order1 G2 and G3.
+"co_present_groups" = ["order1_G2_TUM_HLA", "order1_G3_TUM_HLA"]
+# Every other group in the table is absent from the sample and acts as entrapment.
+
+[peptides]
+# Search space length range. Sub-sequences shorter than min_length cannot be identified.
+"min_length" = 8
+"max_length" = 12
+# Isoleucine and leucine have the same mass and are not distinguished.
+"collapse_il" = true
+
+[recall]
+# Sample peptides that start with these residues are left out of the recall denominator: Ulp1
+# does not release them (P at P1') or releases them poorly (N-terminal G), so they test the
+# expression system rather than the workflow. recall_all keeps them in.
+"exclude_first_residue" = ["P", "G"]
+
+[background]
+# FASTA with the sample-side entries that are not library peptides: expression host, construct,
+# spike-ins and contaminants. A peptide found in one of these entries is real, not false.
+"fasta" = "background.fasta.gz"
+# Placeholder: not yet on the ProteoBench server.
+"fasta_url" = "https://proteobench.cubimed.rub.de/datasets/module_data/immuno/pepyrus_1k/background.fasta.gz"
+# Categories (see fasta_rules) that count as background, in the order they are checked.
+"categories" = ["construct", "host", "contaminant"]
+
+[search_space]
+# Entrapment-to-sample ratio r of the search FASTA, counted as unique sub-sequences in the length
+# range (see proteobench.modules.immuno.dataset.compute_search_space_ratio). Sample part: sample and
+# co-present groups plus the background categories. Entrapment part: the entrapment categories plus
+# the absent library groups, minus sequences that also occur in the sample part.
+"r" = 6.47
+"fasta_name" = "pepyrus_immuno_poc_targets.fasta"
+"entrapment_categories" = ["human"]
+# Below this r the upper bound of the FDP is not reported (e.g. an experimental spectral library
+# built from the sample itself holds almost no entrapment).
+"min_r" = 1.0
+
+# Rules that assign each FASTA header (without ">") a category; the first matching regex wins.
+# "library" entries are skipped, because the ground-truth table describes them.
+[[fasta_rules]]
+"pattern" = "^pepyrus\\|"
+"category" = "library"
+
+[[fasta_rules]]
+"pattern" = "OS=Escherichia"
+"category" = "host"
+
+[[fasta_rules]]
+"pattern" = "^(?!.*OS=)"
+"category" = "construct"
+
+[[fasta_rules]]
+"pattern" = "\\|K[12]C\\w*_HUMAN "
+"category" = "contaminant"
+
+[[fasta_rules]]
+"pattern" = "OS=Homo sapiens"
+"category" = "human"
+
+[fasta_rules_default]
+"category" = "contaminant"

@@ -1,0 +1,22 @@
+[general]
+"level" = "peptide"
+# Ground-truth definition: a folder name in proteobench/modules/immuno/datasets/ or a path.
+"dataset" = "pepyrus_1k"
+# Benchmark rule: rank-1 target PSMs with a peptide-level q-value at or below this threshold.
+"declared_fdr" = 0.01
+
+# Validation profile (proteobench/validation/profiles.py). No [reference_database]: peptides are
+# checked against the dataset's ground truth, not a protein FASTA.
+[validation]
+"profile" = "immuno"
+
+# Runs of the benchmark sample: run name without extension = label shown in the results.
+# Results may cover a subset; runs that are not listed are rejected. Leave empty to accept any run.
+[run_mapper]
+"BM20240207_Ultra_IO25_200nl_90min_CC_Kas_1_012924_p_PrositPepyrus-I_1k_rep1_2of20_DDA_M13_Slot1-1_1_4959" = "4959"
+"BM20240207_Ultra_IO25_200nl_90min_CC_Kas_1_012924_p_PrositPepyrus-I_1k_rep2_2of20_DDA_M13_Slot1-1_1_4961" = "4961"
+"BM20240229_Ultra_IO25_200nl_90min_CC_Kas_2_022724_p_PrositPepyrus-I_1k_rep1_2of20_DDA_M13_Slot1-1_1_5088" = "5088"
+"BM20240229_Ultra_IO25_200nl_90min_CC_Kas_2_022724_p_PrositPepyrus-I_1k_rep2_2of20_DDA_M13_Slot1-1_1_5090" = "5090"
+"BM20240305_Ultra_IO25_200nl_90min_CC_Kas_2_022724_p_PrositPepyrus-I_1k_rep1_2of20_50p_DDA_M13_Slot1-1_1_5110" = "5110"
+"BM20240315_Ultra_IO25_200nl_90min_CC_Kas_1_031324_p_PrositPepyrus-I_1k_rep1_2of20_50p_DDA_M13_Slot1-1_1_5279" = "5279"
+"BM20240315_Ultra_IO25_200nl_90min_CC_Kas_1_031324_p_PrositPepyrus-I_1k_rep2_2of20_50p_DDA_M13_Slot1-1_1_5281" = "5281"

@@ -138,3 +138,12 @@
 "MSAID" = "parse_settings_msaid.toml"
 "Custom" = "parse_settings_custom.toml"
 "PEAKS" = "parse_settings_peaks.toml"
+
+[immuno_HLAI_DDA_timsTOF]
+"Sage" = "parse_settings_sage.toml"
+"MS2Rescore" = "parse_settings_ms2rescore.toml"
+"Custom" = "parse_settings_custom.toml"
+
+[immuno_HLAI_DIA_diaPASEF]
+"DIA-NN" = "parse_settings_diann.toml"
+"Custom" = "parse_settings_custom.toml"

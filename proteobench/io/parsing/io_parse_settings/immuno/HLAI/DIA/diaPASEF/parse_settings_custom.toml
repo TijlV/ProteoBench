@@ -1,0 +1,18 @@
+[mapper]
+"Raw file" = "Raw file"
+"Sequence" = "Sequence"
+"Q-Value" = "Q-Value"
+
+[optional_mapper]
+"Charge" = "Charge"
+"Rank" = "Rank"
+"Decoy" = "Decoy"
+
+[general]
+"decoy_values" = ["true", "1"]
+
+[upload_info]
+"datapoint_file" = "custom_format.tsv"
+"datapoint_file_description" = "Upload a tab-delimited file with one row per PSM or precursor and the columns `Raw file` (run name), `Sequence` (peptide or peptidoform in any notation; modifications are ignored) and `Q-Value` (peptide-level q-value). Optional: `Rank` (only rank 1 counts), `Decoy` (true or 1 for decoys) and `Charge`."
+"params_file" = ""
+"params_file_description" = ""

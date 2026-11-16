@@ -50,6 +50,12 @@ from proteobench.github.gh import GithubProteobotRepo
 from proteobench.io.parsing.utils import add_maxquant_fixed_modifications
 from proteobench.modules.denovo.denovo_base import DeNovoModule
 from proteobench.modules.denovo.denovo_DDA_HCD import DDAHCDDeNovoModule
+from proteobench.modules.immuno.immuno_HLAI_DDA_timsTOF import (
+    DDAImmunoHLAIModuletimsTOF,
+)
+from proteobench.modules.immuno.immuno_HLAI_DIA_diaPASEF import (
+    DIAImmunoHLAIModulediaPASEF,
+)
 from proteobench.modules.quant.quant_base_module import QuantModule
 from proteobench.modules.quant.quant_lfq_ion_DDA_Astral import DDAQuantIonAstralModule
 from proteobench.modules.quant.quant_lfq_ion_DDA_QExactive import (
@@ -99,6 +105,9 @@ REPO_MODULE_REGISTRY: dict[str, tuple[str, type, Path]] = {
     "Results_quant_peptidoform_DIA":      ("quant_lfq_DIA_peptidoform",     DIAQuantPeptidoformModule,   _PARAMS_JSON_DIR / "Quant" / "quant_lfq_DIA_peptidoform.json"),
     # De novo
     "Results_denovo_lfq_DDA_HCD":        ("denovo_DDA_HCD",                DDAHCDDeNovoModule,          _PARAMS_JSON_DIR / "denovo" / "denovo_DDA_HCD.json"),
+    # Immunopeptidomics
+    "Results_immuno_HLAI_DDA_timsTOF":   ("immuno_HLAI_DDA_timsTOF",       DDAImmunoHLAIModuletimsTOF,  _PARAMS_JSON_DIR / "Immuno" / "immuno_HLAI.json"),
+    "Results_immuno_HLAI_DIA_diaPASEF":  ("immuno_HLAI_DIA_diaPASEF",      DIAImmunoHLAIModulediaPASEF, _PARAMS_JSON_DIR / "Immuno" / "immuno_HLAI.json"),
     # fmt: on
 }
 
@@ -1352,7 +1361,7 @@ def reprocess_datapoint(
                 # evaluation_type
                 eval_type = dp_json.get("evaluation_type", "mass")
                 kwargs["evaluation_type"] = eval_type
-            else:
+            elif isinstance(module_instance, QuantModule):
                 # Quant modules
                 default_cutoff = 3  # default
                 max_nr_observed = None
@@ -1376,9 +1385,9 @@ def reprocess_datapoint(
                 kwargs["default_cutoff_min_feature"] = default_cutoff
                 if max_nr_observed is not None:
                     kwargs["max_nr_observed"] = max_nr_observed
-                # AlphaDIA secondary file
-                if extracted["input_file_secondary"]:
-                    kwargs["input_file_secondary"] = extracted["input_file_secondary"]
+            # Secondary file: AlphaDIA, or the spectral library of an immuno DIA search
+            if not is_denovo and extracted["input_file_secondary"]:
+                kwargs["input_file_secondary"] = extracted["input_file_secondary"]
 
             # MaxQuant fixed modifications handling
             if input_format == "MaxQuant" and parsed_params:

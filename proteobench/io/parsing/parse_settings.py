@@ -1428,6 +1428,173 @@ class ParseSettingsEntrapment:
         return df  # self._format_by_analysis_level(df_melted), replicate_to_raw
 
 
+class ParseSettingsImmuno:
+    """
+    Parse settings for the immunopeptidomics identification modules.
+
+    Converts a tool's PSM or precursor table into one standard table with the columns ``Raw file``,
+    ``Sequence``, ``Q-Value`` (peptide level), ``Rank``, ``Decoy`` and, when the tool reports it,
+    ``Charge``. Filtering (rank 1, targets, declared FDR) is left to the module.
+
+    TOML sections:
+
+    - ``[mapper]``: required tool columns -> standard names.
+    - ``[optional_mapper]``: tool columns that are used when present (e.g. DIA-NN ``Decoy``,
+      which is only written with ``--report-decoys``).
+    - ``[qvalue]`` (optional): ``columns`` is a list of alternatives lists. Within each list the
+      first column present is taken; ``Q-Value`` is the row-wise maximum over the lists. DIA-NN uses
+      this to require 1% both within the run and over all runs.
+    - ``[general]``: ``decoy_values`` (values of ``Decoy`` that mark a decoy) and optionally
+      ``run_name_cleanup`` (regex removed from run names).
+
+    Parameters
+    ----------
+    parse_settings : Dict[str, Any]
+        The tool-specific settings, loaded from a TOML file.
+    parse_settings_module : Dict[str, Any]
+        The module settings, loaded from module_settings.toml.
+    """
+
+    STANDARD_COLUMNS = ["Raw file", "Sequence", "Charge", "Rank", "Decoy", "Q-Value"]
+
+    def __init__(self, parse_settings: Dict[str, Any], parse_settings_module: Dict[str, Any]):
+        """
+        Initialize the parser from the tool and module settings.
+
+        Parameters
+        ----------
+        parse_settings : Dict[str, Any]
+            The tool-specific settings, loaded from a TOML file.
+        parse_settings_module : Dict[str, Any]
+            The module settings, loaded from module_settings.toml.
+        """
+        self.mapper = parse_settings["mapper"]
+        self.optional_mapper = parse_settings.get("optional_mapper", {})
+        self.qvalue_columns = parse_settings.get("qvalue", {}).get("columns", [])
+        general = parse_settings.get("general", {})
+        self.decoy_values = general.get("decoy_values", [])
+        self._run_name_cleanup = re.compile(
+            general.get("run_name_cleanup", "")
+            or r"(?:\.mzML\.gz|\.mzML|\.raw|\.RAW|\.d|\.wiff|\.mgf|\.mzBIN|_uncalibrated)$"
+        )
+        self.modification_parser = None
+
+    def add_modification_parser(self, parser: ParseModificationSettings):
+        """
+        Accept a modification parser for interface compatibility; sequences are matched without modifications.
+
+        Parameters
+        ----------
+        parser : ParseModificationSettings
+            The modification parser.
+        """
+        self.modification_parser = parser
+
+    def needed_columns(self) -> set:
+        """
+        Return the tool columns this parser can use, so loaders can skip the rest.
+
+        Returns
+        -------
+        set
+            Column names in the tool's output.
+        """
+        columns = set(self.mapper) | set(self.optional_mapper)
+        return columns | {c for alternatives in self.qvalue_columns for c in alternatives}
+
+    def _clean_run_name(self, name: Any) -> Any:
+        """
+        Strip the directory and a raw-file extension from a run name.
+
+        Parameters
+        ----------
+        name : Any
+            The run name; non-strings are returned unchanged.
+
+        Returns
+        -------
+        Any
+            The cleaned run name.
+        """
+        if not isinstance(name, str):
+            return name
+        name = name.replace("\\", "/").rsplit("/", 1)[-1]
+        return self._run_name_cleanup.sub("", name)
+
+    def _is_decoy(self, values: pd.Series) -> pd.Series:
+        """
+        Mark rows whose decoy column equals one of ``decoy_values``.
+
+        Parameters
+        ----------
+        values : pd.Series
+            The decoy column (numeric, boolean or text).
+
+        Returns
+        -------
+        pd.Series
+            True for decoys.
+        """
+        if not self.decoy_values:
+            return pd.Series(False, index=values.index)
+        numeric = pd.to_numeric(values, errors="coerce")
+        wanted_numeric = [v for v in self.decoy_values if isinstance(v, (int, float)) and not isinstance(v, bool)]
+        if wanted_numeric and numeric.notna().all():
+            return numeric.isin(wanted_numeric)
+        wanted = {str(v).strip().lower() for v in self.decoy_values}
+        return values.astype(str).str.strip().str.lower().isin(wanted)
+
+    def convert_to_standard_format(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Convert a tool output into the standard identification table.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The tool output.
+
+        Returns
+        -------
+        pd.DataFrame
+            Table with the columns in ``STANDARD_COLUMNS``.
+        """
+        missing = set(self.mapper).difference(df.columns)
+        if missing:
+            raise ValueError(
+                f"Columns {sorted(missing)} not found in the input file. Please check the input file and the "
+                "selected software tool."
+            )
+        mapping = {**{k: v for k, v in self.optional_mapper.items() if k in df.columns}, **self.mapper}
+        out = df[list(mapping)].rename(columns=mapping)
+
+        if self.qvalue_columns:
+            chosen = []
+            for alternatives in self.qvalue_columns:
+                present = [c for c in alternatives if c in df.columns]
+                if not present:
+                    raise ValueError(f"None of the q-value columns {alternatives} is in the input file.")
+                chosen.append(present[0])
+            qvalues = df[chosen].apply(pd.to_numeric, errors="coerce")
+            out["Q-Value"] = qvalues.max(axis=1)
+            # The file is complete only up to the strictest export cut-off among the columns (DIA-NN: the
+            # run-level --qvalue, while the global q-value goes up to 1).
+            coverage = float(qvalues.max().min())
+        if "Q-Value" not in out.columns:
+            raise ValueError("No peptide-level q-value column configured for this tool.")
+
+        out["Raw file"] = out["Raw file"].map(self._clean_run_name)
+        out["Q-Value"] = pd.to_numeric(out["Q-Value"], errors="coerce")
+        out["Rank"] = pd.to_numeric(out["Rank"], errors="coerce") if "Rank" in out.columns else 1
+        out["Decoy"] = self._is_decoy(out["Decoy"]) if "Decoy" in out.columns else False
+        if "Charge" not in out.columns:
+            # ProForma peptidoforms (e.g. MS2Rescore) carry the charge as a "/2" suffix.
+            suffix = out["Sequence"].astype(str).str.extract(r"/(\d+)$", expand=False)
+            out["Charge"] = pd.to_numeric(suffix, errors="coerce").astype("Int64")
+        out = out[self.STANDARD_COLUMNS].reset_index(drop=True)
+        out.attrs["qvalue_coverage"] = coverage if self.qvalue_columns else float(out["Q-Value"].max())
+        return out
+
+
 MODULE_TO_CLASS = {
     "quant_lfq_DDA_ion_Astral": ParseSettingsQuant,
     "quant_lfq_DDA_ion_QExactive": ParseSettingsQuant,
@@ -1442,4 +1609,6 @@ MODULE_TO_CLASS = {
     "entrapment_DIA_ion_Astral": ParseSettingsEntrapment,
     "quant_lfq_DIA_ion_Astral_lowinput": ParseSettingsQuant,
     "quant_lfq_DIA_ion_timsTOF_lowinput": ParseSettingsQuant,
+    "immuno_HLAI_DDA_timsTOF": ParseSettingsImmuno,
+    "immuno_HLAI_DIA_diaPASEF": ParseSettingsImmuno,
 }
