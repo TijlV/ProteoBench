@@ -718,7 +718,7 @@ def metrics_at_qvalue(result_df: pd.DataFrame, threshold: float) -> pd.DataFrame
     """
     Replace the headline metrics of every datapoint with those at a q-value threshold.
 
-    Datapoints scored before the per-threshold metrics existed only have the declared FDR.
+    A datapoint without per-threshold metrics (no ``results["by_qvalue"]``) is shown at its declared FDR only.
 
     Parameters
     ----------
@@ -740,7 +740,7 @@ def metrics_at_qvalue(result_df: pd.DataFrame, threshold: float) -> pd.DataFrame
             results = json.loads(results)
         at = (results or {}).get("by_qvalue", {}).get(f"{threshold:g}")
         if at is None and math.isclose(float(row.get("declared_fdr", math.nan)), threshold):
-            rows.append(row)  # an older datapoint: its headline metrics are those at the declared FDR
+            rows.append(row)  # no per-threshold metrics: its headline metrics are those at the declared FDR
         elif at is not None:
             row = row.copy()
             row["n_sample_peptides"] = at.get("n_sample", math.nan)

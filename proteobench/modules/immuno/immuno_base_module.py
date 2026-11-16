@@ -439,9 +439,14 @@ class ImmunoModule(EntrapmentModule):
         Returns
         -------
         Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]
-            The intermediate table, all datapoints including the new one, and the standardised input.
+            The intermediate table, all datapoints including the new one, and the standardised input. The
+            submission is the only row with ``old_new == "new"``; when it duplicates an existing result
+            (same ``intermediate_hash``) it is not added and no row is "new".
         """
         intermediate, datapoint, standard = self.score(input_file, input_format, user_input, input_file_secondary)
+        if isinstance(all_datapoints, pd.DataFrame) and "old_new" in all_datapoints.columns:
+            # Only this submission can be "new"; a duplicate of an existing result leaves no "new" row.
+            all_datapoints = all_datapoints.assign(old_new="old")
         try:
             all_datapoints = self.add_current_data_point(datapoint, all_datapoints=all_datapoints)
         except Exception as e:

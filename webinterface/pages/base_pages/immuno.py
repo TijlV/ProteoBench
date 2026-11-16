@@ -7,6 +7,8 @@ from typing import Any, Dict, Optional
 import pandas as pd
 import streamlit as st
 
+from proteobench.datapoint.immuno_datapoint import name_rescored_workflow
+
 from .base import BaseUIModule
 from .tabs import (
     tab1_view_public_results,
@@ -183,7 +185,8 @@ class ImmunoUIObjects(BaseUIModule):
             "(★) marks the uploaded result. The bars on the right give the pool peptides identified."
         )
         options = QVALUE_THRESHOLDS + ["Declared FDR"]
-        default = f"{plot_params.get('qvalue_threshold', 0.01):g}"
+        main_threshold = float(plot_params.get("qvalue_threshold", 0.01))
+        default = next((o for o in QVALUE_THRESHOLDS if float(o) == main_threshold), "0.01")
         col_sort, col_thresh = st.columns([2, 1])
         with col_sort:
             sort_dir = st.radio(
@@ -490,6 +493,7 @@ class ImmunoUIObjects(BaseUIModule):
             for name, value in values.items():
                 if value not in ("", None):
                     point[name] = value
+            point = pd.Series(name_rescored_workflow(point.to_dict()), name=point.name)
             path = self.ionmodule.save_local_result(point, st.session_state[self.variables.result_perf])
             # Reload the public results on the next run so the saved one is included.
             for key in (self.variables.all_datapoints, self.variables.all_datapoints_submitted):

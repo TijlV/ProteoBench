@@ -18,11 +18,12 @@ import pytest
 
 from proteobench.io.parsing.parse_settings import ParseSettingsBuilder
 from proteobench.exceptions import ImmunoError
+from proteobench.datapoint.immuno_datapoint import name_rescored_workflow
 from proteobench.modules.constants import MODULE_SETTINGS_DIRS
 from proteobench.modules.immuno.dataset import ImmunoDataset, compute_search_space_ratio
 from proteobench.modules.immuno.immuno_HLAI_DDA_timsTOF import DDAImmunoHLAIModuletimsTOF
 from proteobench.modules.immuno.immuno_HLAI_DIA_diaPASEF import DIAImmunoHLAIModulediaPASEF
-from proteobench.plotting.plot_generator_immuno import ImmunoPlotGenerator
+from proteobench.plotting.plot_generator_immuno import ImmunoPlotGenerator, workflow_label
 from proteobench.validation import ModuleValidationConfig, validate_submission
 
 TESTDATA_DIR = os.path.join(os.path.dirname(__file__), "data", "immuno")
@@ -159,6 +160,17 @@ class TestToyModule:
         shown = ImmunoPlotGenerator().plot_main_metric(pd.DataFrame([datapoint]), qvalue_threshold=1.0)
         assert not shown.data  # not reached by the file, so not plotted
 
+    def test_only_the_latest_upload_is_new(self, tmp_path):
+        module = toy_module()
+        other = tmp_path / "other.tsv"
+        pd.read_csv(TOY_CUSTOM, sep="\t").iloc[:-1].to_csv(other, sep="\t", index=False)
+        _, points, _ = module.benchmarking(TOY_CUSTOM, "Custom", {}, pd.DataFrame())
+        _, points, _ = module.benchmarking(str(other), "Custom", {}, points)
+        assert points["old_new"].tolist() == ["old", "new"]
+        # A duplicate of an existing result is not added and leaves no "new" row.
+        _, points, _ = module.benchmarking(TOY_CUSTOM, "Custom", {}, points)
+        assert points["old_new"].tolist() == ["old", "old"]
+
     def test_library_with_low_r_has_no_upper_bound(self, tmp_path):
         library = tmp_path / "library.tsv"
         pd.DataFrame({"StrippedPeptide": ["SAMPLEPEPK", "GTHEPEPKR", "CQPRESENTK", "ASSENTPEPK"]}).to_csv(
@@ -196,6 +208,46 @@ class TestPepyrusModule:
         generator.plot_main_metric(pd.DataFrame([datapoint]))
         plots = generator.generate_in_depth_plots(intermediate)
         assert set(plots) == {p for layout in generator.get_in_depth_plot_layout() for p in layout["plots"]}
+
+
+@pytest.mark.parametrize(
+    "fields,input_format,expected",
+    [
+        # Upload without parameters: named after the search engine the parse settings expect.
+        (
+            {"software_name": "MS2Rescore"},
+            "MS2Rescore",
+            {"software_name": "Sage", "software_version": "", "rescoring": "MS2Rescore"},
+        ),
+        # Save with the parameters entered: the tool version moves to rescoring_version.
+        (
+            {
+                "software_name": "MS2Rescore",
+                "rescoring": "MS2Rescore",
+                "software_version": "4.0.2",
+                "search_engine_version": "0.14.6",
+            },
+            "",
+            {"software_name": "Sage", "software_version": "0.14.6", "rescoring_version": "4.0.2"},
+        ),
+        # Not a rescoring tool: unchanged.
+        ({"software_name": "Sage", "software_version": "0.14.6"}, "Sage", {"software_name": "Sage"}),
+    ],
+)
+def test_rescored_workflow_is_named_after_search_engine(fields, input_format, expected):
+    named = name_rescored_workflow(fields, input_format)
+    assert {k: named.get(k) for k in expected} == expected
+    assert workflow_label(pd.Series(named)) in ("Sage", "Sage + MS2Rescore")
+
+
+def test_decoy_column_with_empty_cells():
+    parser = ParseSettingsBuilder(
+        MODULE_SETTINGS_DIRS["immuno_HLAI_DDA_timsTOF"], "immuno_HLAI_DDA_timsTOF"
+    ).build_parser("Custom")
+    table = pd.DataFrame(
+        {"Raw file": ["a"] * 3, "Sequence": ["SAMPLEPEPK"] * 3, "Q-Value": [0.001] * 3, "Decoy": [0.0, 1.0, None]}
+    )
+    assert parser.convert_to_standard_format(table)["Decoy"].tolist() == [False, True, False]
 
 
 def test_diann_qvalue_is_max_of_run_and_global():

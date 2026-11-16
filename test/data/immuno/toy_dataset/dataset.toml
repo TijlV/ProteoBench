@@ -25,7 +25,7 @@
 "categories" = ["construct", "host"]
 
 [search_space]
-# Not the r of search.fasta (6/14); chosen to give round FDP values in the tests.
+# Fixed r for the FDP checks in the tests; the r of search.fasta is 6/14 (see test_search_space_ratio).
 "r" = 4.0
 "entrapment_categories" = ["human"]
 "min_r" = 1.0

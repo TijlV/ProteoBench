@@ -1537,12 +1537,17 @@ class ParseSettingsImmuno:
         """
         if not self.decoy_values:
             return pd.Series(False, index=values.index)
+        wanted_text = {str(v).strip().lower() for v in self.decoy_values}
+        wanted_numeric = set()
+        for value in self.decoy_values:
+            number = None if isinstance(value, bool) else pd.to_numeric(value, errors="coerce")
+            if number is not None and pd.notna(number):
+                wanted_numeric.add(float(number))
+        # Numbers are compared as numbers, so 1, 1.0 and "1" match alike (a column with empty cells is read
+        # as float); everything else is compared as lower-case text.
         numeric = pd.to_numeric(values, errors="coerce")
-        wanted_numeric = [v for v in self.decoy_values if isinstance(v, (int, float)) and not isinstance(v, bool)]
-        if wanted_numeric and numeric.notna().all():
-            return numeric.isin(wanted_numeric)
-        wanted = {str(v).strip().lower() for v in self.decoy_values}
-        return values.astype(str).str.strip().str.lower().isin(wanted)
+        is_numeric_match = numeric.isin(wanted_numeric) if wanted_numeric else pd.Series(False, index=values.index)
+        return is_numeric_match | values.astype(str).str.strip().str.lower().isin(wanted_text)
 
     def convert_to_standard_format(self, df: pd.DataFrame) -> pd.DataFrame:
         """

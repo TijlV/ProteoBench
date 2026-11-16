@@ -18,9 +18,46 @@ import proteobench
 from proteobench.datapoint.datapoint_base import DatapointBase
 from proteobench.score.immunoscores import ImmunoScores
 
-# Input formats that rescore the PSMs of a search engine. Their datapoints are named after the
-# search engine, with the tool in ``rescoring``.
-RESCORING_TOOLS = ("MS2Rescore",)
+# Input formats that rescore the PSMs of a search engine, with the search engine whose output the
+# module's parse settings expect. Their datapoints are named after the search engine, with the tool
+# in ``rescoring`` (see ``name_rescored_workflow``).
+RESCORING_TOOLS = {"MS2Rescore": "Sage"}
+
+
+def name_rescored_workflow(fields: Dict[str, Any], input_format: str = "") -> Dict[str, Any]:
+    """
+    Name a rescored workflow after its search engine.
+
+    Applies when ``input_format`` or ``fields["rescoring"]`` is a key of ``RESCORING_TOOLS``; other
+    fields are returned unchanged.
+
+    Parameters
+    ----------
+    fields : Dict[str, Any]
+        Datapoint fields.
+    input_format : str, optional
+        The input format of the submission.
+
+    Returns
+    -------
+    Dict[str, Any]
+        A copy of ``fields`` with ``rescoring`` set to the tool, ``search_engine`` defaulting to the
+        search engine in ``RESCORING_TOOLS``, ``software_name`` and ``software_version`` equal to the
+        search engine and its version, and ``rescoring_version`` defaulting to the given
+        ``software_version`` (the version of the tool that wrote the file).
+    """
+    tool = input_format if input_format in RESCORING_TOOLS else fields.get("rescoring")
+    if tool not in RESCORING_TOOLS:
+        return dict(fields)
+    out = dict(fields)
+    given_version = str(out.get("software_version") or "").strip()
+    if given_version and given_version != str(out.get("search_engine_version") or "").strip():
+        out["rescoring_version"] = out.get("rescoring_version") or given_version
+    out["rescoring"] = tool
+    out["search_engine"] = out.get("search_engine") or RESCORING_TOOLS[tool]
+    out["software_name"] = out["search_engine"]
+    out["software_version"] = out.get("search_engine_version") or ""
+    return out
 
 
 @dataclass
@@ -182,12 +219,8 @@ class ImmunoDatapoint(DatapointBase):
         user_input = {k: ("" if v is None else v) for k, v in dict(user_input or {}).items()}
         fields = {f.name for f in dataclasses.fields(ImmunoDatapoint)}
         params = {k: v for k, v in user_input.items() if k in fields and k not in ("id", "results")}
-        if input_format in RESCORING_TOOLS:
-            params["software_name"] = params.get("search_engine") or input_format
-            params["software_version"] = params.get("search_engine_version") or ""
-            params["rescoring"] = params.get("rescoring") or input_format
-        else:
-            params["software_name"] = input_format
+        params["software_name"] = input_format
+        params = name_rescored_workflow(params, input_format)
         point = ImmunoDatapoint(
             **params,
             intermediate_hash=hashlib.sha1(intermediate.to_string().encode("utf-8")).hexdigest(),
