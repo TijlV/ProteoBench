@@ -115,6 +115,9 @@ class ImmunoDatapoint(DatapointBase):
     max_qvalue_in_input : float
         Q-value up to which the submitted file is complete, i.e. the threshold the tool applied (for
         DIA-NN the stricter of the run-level and global cut-off).
+    n_below_min_length : int
+        Unique peptides accepted at the declared FDR that are shorter than the dataset's
+        ``min_length``; they are left out of the scoring.
     n_runs : int
         Number of runs scored.
     n_sample_peptides : float
@@ -159,6 +162,7 @@ class ImmunoDatapoint(DatapointBase):
     r_source: str = ""
     declared_fdr: float = math.nan
     max_qvalue_in_input: float = math.nan
+    n_below_min_length: int = 0
     n_runs: int = 0
     n_sample_peptides: float = math.nan
     recall: float = math.nan
@@ -188,6 +192,7 @@ class ImmunoDatapoint(DatapointBase):
         r_source: str = "fasta",
         max_qvalue_in_input: float = math.nan,
         by_qvalue: Dict[str, Dict[str, Any]] = None,
+        n_below_min_length: int = 0,
     ) -> pd.Series:
         """
         Build the datapoint of one submission.
@@ -210,6 +215,8 @@ class ImmunoDatapoint(DatapointBase):
             Q-value up to which the submitted file is complete.
         by_qvalue : Dict[str, Dict[str, Any]], optional
             Summary metrics per q-value threshold, from ``ImmunoScores.metrics_by_qvalue``.
+        n_below_min_length : int, optional
+            Unique accepted peptides left out because they are shorter than ``min_length``.
 
         Returns
         -------
@@ -236,6 +243,7 @@ class ImmunoDatapoint(DatapointBase):
         point.r, point.r_source = r, r_source
         point.declared_fdr = scores.declared_fdr
         point.max_qvalue_in_input = max_qvalue_in_input
+        point.n_below_min_length = int(n_below_min_length)
         point.n_runs = int(summary["n_runs"])
         point.n_sample_peptides = summary.get("n_sample", math.nan)
         point.recall = summary.get("recall", math.nan)

@@ -20,7 +20,8 @@ module_settings.toml          dataset = "pepyrus_1k", declared_fdr, run_mapper, 
 parse_settings_<tool>.toml    tool columns -> Raw file, Sequence, Q-Value, Rank, Decoy, Charge
         │
         ▼
-ImmunoModule.score()          read -> ParseSettingsImmuno -> run labels -> rank 1, targets, q <= declared_fdr
+ImmunoModule.score()          read -> ParseSettingsImmuno -> run labels -> rank 1, targets, length >= min_length,
+                              q <= declared_fdr
         │
         ▼
 ImmunoScores                  classify unique peptides per run (ImmunoDataset.classify), recall, FDP bounds

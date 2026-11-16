@@ -346,6 +346,9 @@ class ImmunoModule(EntrapmentModule):
         """
         Parse, filter and score a submission without touching the results repository.
 
+        Rank-1 target identifications are kept; peptides shorter than the dataset's ``min_length`` (without
+        modifications) are left out and counted in ``n_below_min_length``.
+
         Parameters
         ----------
         input_file : str, PathLike or file object
@@ -382,9 +385,18 @@ class ImmunoModule(EntrapmentModule):
         standard = self._map_runs(standard)
 
         targets = standard[(standard["Rank"] == 1) & ~standard["Decoy"]]
+        # Peptides shorter than the dataset's min_length are left out of the scoring and counted in the datapoint.
+        ds = self.dataset
+        bare = targets["Sequence"].map(ds.normalise)
+        long_enough = bare.str.len() >= ds.min_length
+        n_too_short = bare[~long_enough & (targets["Q-Value"] <= self.declared_fdr)].nunique()
+        targets = targets[long_enough]
         accepted = targets[targets["Q-Value"] <= self.declared_fdr]
         if accepted.empty:
-            raise ImmunoError(f"No rank-1 target identifications at a peptide-level q-value <= {self.declared_fdr}.")
+            raise ImmunoError(
+                f"No rank-1 target identifications of at least {ds.min_length} residues at a peptide-level "
+                f"q-value <= {self.declared_fdr}."
+            )
 
         if input_file_secondary is not None:
             r, r_source = self.library_ratio(input_file_secondary), "library"
@@ -407,6 +419,7 @@ class ImmunoModule(EntrapmentModule):
                 r_source=r_source,
                 max_qvalue_in_input=float(targets["Q-Value"].max()) if coverage is None else coverage,
                 by_qvalue=scores.metrics_by_qvalue(targets, r, max_qvalue=coverage),
+                n_below_min_length=n_too_short,
             )
         except Exception as e:
             raise DatapointGenerationError(f"Error generating the datapoint: {e}")

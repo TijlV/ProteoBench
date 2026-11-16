@@ -248,6 +248,21 @@ class ImmunoUIObjects(BaseUIModule):
         except Exception:  # the plots are drawn without the pool bars
             return None
 
+    def _length_note(self, datapoint: pd.Series) -> None:
+        """Note on the accepted peptides that were left out because they are too short."""
+        try:
+            n = int(datapoint.get("n_below_min_length", 0) or 0)
+        except (TypeError, ValueError):
+            return
+        if n:
+            k = self.ionmodule.dataset.min_length
+            st.info(
+                f"{n:,} accepted peptide{'s' if n != 1 else ''} shorter than {k} residues "
+                f"{'were' if n != 1 else 'was'} left out. The benchmark covers peptides of at least {k} "
+                "residues, so these count neither as true nor as false.",
+                icon="ℹ️",
+            )
+
     def _summary_metrics(self, datapoint: pd.Series) -> None:
         """Headline metrics of one datapoint."""
         cols = st.columns(5)
@@ -356,6 +371,7 @@ class ImmunoUIObjects(BaseUIModule):
                 return
             st.subheader("Result")
             self._summary_metrics(new)
+            self._length_note(new)
             self._per_run_table(new)
 
     def display_indepth_plots(self) -> None:
@@ -367,6 +383,7 @@ class ImmunoUIObjects(BaseUIModule):
         if datapoint is None:
             return
         self._summary_metrics(datapoint)
+        self._length_note(datapoint)
         st.subheader("Per run")
         self._per_run_table(datapoint)
 

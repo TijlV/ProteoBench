@@ -160,6 +160,18 @@ class TestToyModule:
         shown = ImmunoPlotGenerator().plot_main_metric(pd.DataFrame([datapoint]), qvalue_threshold=1.0)
         assert not shown.data  # not reached by the file, so not plotted
 
+    def test_peptides_below_min_length_are_left_out(self, result, tmp_path):
+        with_short = tmp_path / "with_short.tsv"
+        toy_input = pd.read_csv(TOY_CUSTOM, sep="\t")
+        # A 7-residue piece of the sample peptide SAMPLEPEPK, twice, accepted at the declared FDR.
+        short = pd.DataFrame([["run1.mzML", "MPLEPEP", 0.001, 1, "false"]] * 2, columns=toy_input.columns)
+        pd.concat([toy_input, short]).to_csv(with_short, sep="\t", index=False)
+        intermediate, datapoint, _ = toy_module().score(str(with_short), "Custom", {"software_version": "1"})
+        assert "MPLEPEP" not in set(intermediate["peptide"])
+        assert datapoint["n_below_min_length"] == 1
+        assert result[1]["n_below_min_length"] == 0
+        assert datapoint["fdp_upper"] == pytest.approx(result[1]["fdp_upper"])
+
     def test_only_the_latest_upload_is_new(self, tmp_path):
         module = toy_module()
         other = tmp_path / "other.tsv"
